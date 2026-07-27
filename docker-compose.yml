@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: mali_meteo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mali_meteo_rh
+    ports:
+      - "5432:5432"
+    volumes:
+      - mali_meteo_pgdata:/var/lib/postgresql/data
+
+volumes:
+  mali_meteo_pgdata:

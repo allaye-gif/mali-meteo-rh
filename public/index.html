@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="/favicon.png">
+<title>Mali-Météo — Gestion du Personnel</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<!-- ===================== ÉCRAN DE CONNEXION ===================== -->
+<div id="ecran-login" class="ecran-login">
+  <div class="login-panel">
+    <div class="login-brand">
+      <img src="/assets/logo-mali-meteo.png" alt="Logo Mali-Météo" class="brand-logo">
+      <div class="brand-tricolore"><span></span><span></span><span></span></div>
+      <h1>MALI-MÉTÉO</h1>
+      <p>Gestion du Personnel</p>
+    </div>
+    <form id="form-login" class="login-form">
+      <div id="login-erreur" class="alerte alerte-erreur cache"></div>
+      <label>Identifiant
+        <input type="text" id="login-username" autocomplete="username" required>
+      </label>
+      <label>Mot de passe
+        <input type="password" id="login-password" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+    </form>
+    <div class="login-comptes">
+      <p>Comptes de démonstration :</p>
+      <code>admin / admin123</code> · <code>daf / daf123</code> · <code>grh / grh123</code>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== APPLICATION ===================== -->
+<div id="app" class="app cache">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-ligne">
+        <img src="/assets/logo-mali-meteo.png" alt="Logo Mali-Météo" class="brand-logo petit">
+        <div>
+          <div class="sidebar-titre">MALI-MÉTÉO</div>
+          <div class="sidebar-soustitre">Gestion du Personnel</div>
+        </div>
+      </div>
+      <div class="brand-tricolore"><span></span><span></span><span></span></div>
+    </div>
+    <nav id="nav-menu" class="nav-menu"></nav>
+    <div class="sidebar-footer">
+      <div class="user-badge">
+        <div id="user-avatar" class="user-avatar">A</div>
+        <div>
+          <div id="user-nom" class="user-nom">—</div>
+          <div id="user-role" class="user-role-tag">—</div>
+        </div>
+      </div>
+      <button id="btn-changer-mdp" class="btn-lien">Changer mon mot de passe</button>
+      <button id="btn-logout" class="btn btn-secondary btn-block">Se déconnecter</button>
+    </div>
+  </aside>
+
+  <main class="contenu">
+    <header class="topbar">
+      <h2 id="titre-page">Tableau de bord</h2>
+      <div id="topbar-actions" class="topbar-actions"></div>
+    </header>
+    <div id="alerte-globale" class="alerte cache"></div>
+    <div id="vue" class="vue"></div>
+  </main>
+</div>
+
+<!-- ===================== MODALE GÉNÉRIQUE ===================== -->
+<div id="modale-overlay" class="modale-overlay cache">
+  <div id="modale-boite" class="modale-boite"></div>
+</div>
+
+<!-- ===================== ZONE D'IMPRESSION ===================== -->
+<div id="zone-impression" class="zone-impression"></div>
+
+<script src="/js/api.js"></script>
+<script src="/js/ui.js"></script>
+<script src="/js/vues.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

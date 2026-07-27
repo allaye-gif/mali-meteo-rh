@@ -1,0 +1,91 @@
+// ============ Utilitaires d'interface ============
+
+// Organigramme Directions / Services de Mali-Météo. Une direction sans liste
+// (Agence Comptable) n'a pas de service : le champ Service reste vide/masqué.
+const ORGANISATION = {
+  'DECA': ['SCCC', 'SA'],
+  'DIPM': ['SIGROM', 'SPM'],
+  'DAF': ['SGRH', 'SBA'],
+  'Agence Comptable': [],
+};
+
+function esc(v) {
+  if (v === null || v === undefined) return '';
+  return String(v)
+    .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso.length === 10 ? iso + 'T00:00:00' : iso.replace(' ', 'T'));
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('fr-FR');
+}
+
+function formatDateHeure(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso.replace(' ', 'T') + 'Z');
+  if (isNaN(d)) return iso;
+  return d.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function initiales(nom, prenom) {
+  return `${(prenom || '?')[0] || ''}${(nom || '?')[0] || ''}`.toUpperCase();
+}
+
+function libelleRole(role) {
+  return { admin: 'Administrateur', daf: 'DAF', grh: 'GRH', agent: 'Agent' }[role] || role;
+}
+
+function badgeStatut(statut) {
+  const map = {
+    'Actif': 'badge-actif', 'En congé': 'badge-conge',
+    'Suspendu': 'badge-suspendu', 'Retraité': 'badge-retraite'
+  };
+  return `<span class="badge ${map[statut] || 'badge-actif'}">${esc(statut || 'Actif')}</span>`;
+}
+
+let timeoutAlerte = null;
+function afficherAlerte(message, type = 'info', dureeMs = 4500) {
+  const el = document.getElementById('alerte-globale');
+  el.className = `alerte alerte-${type}`;
+  el.textContent = message;
+  el.classList.remove('cache');
+  clearTimeout(timeoutAlerte);
+  timeoutAlerte = setTimeout(() => el.classList.add('cache'), dureeMs);
+}
+
+// ---------- Modale générique ----------
+function ouvrirModale(html, { large = false } = {}) {
+  const boite = document.getElementById('modale-boite');
+  boite.className = 'modale-boite' + (large ? ' large' : '');
+  boite.innerHTML = html;
+  document.getElementById('modale-overlay').classList.remove('cache');
+}
+function fermerModale() {
+  document.getElementById('modale-overlay').classList.add('cache');
+  document.getElementById('modale-boite').innerHTML = '';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('modale-overlay').addEventListener('click', (e) => {
+    if (e.target.id === 'modale-overlay') fermerModale();
+  });
+});
+
+function confirmerAction(titre, message, libelleBouton = 'Confirmer', variante = 'btn-danger') {
+  return new Promise((resolve) => {
+    ouvrirModale(`
+      <div class="modale-entete"><h3>${esc(titre)}</h3><button class="modale-fermer" data-fermer>✕</button></div>
+      <div class="modale-corps"><p>${esc(message)}</p></div>
+      <div class="modale-pied">
+        <button class="btn btn-fantome" data-annuler>Annuler</button>
+        <button class="btn ${variante}" data-confirmer>${esc(libelleBouton)}</button>
+      </div>
+    `);
+    const boite = document.getElementById('modale-boite');
+    boite.querySelector('[data-fermer]').onclick = () => { fermerModale(); resolve(false); };
+    boite.querySelector('[data-annuler]').onclick = () => { fermerModale(); resolve(false); };
+    boite.querySelector('[data-confirmer]').onclick = () => { fermerModale(); resolve(true); };
+  });
+}
