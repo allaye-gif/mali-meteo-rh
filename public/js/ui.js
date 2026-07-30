@@ -9,6 +9,16 @@ const ORGANISATION = {
   'Agence Comptable': [],
 };
 
+// Types de personnel (catégorie professionnelle) : liste fixe utilisée à la
+// fois par le formulaire agent et par la répartition du tableau de bord.
+const TYPES_PERSONNEL = [
+  'Personnel Administratif',
+  'Personnel Observateurs',
+  'Personnel Ingénieurs',
+  'Personnel Techniciens et Techniciens Supérieurs',
+  'Personnel Chauffeurs et Plantons',
+];
+
 function esc(v) {
   if (v === null || v === undefined) return '';
   return String(v)
@@ -44,6 +54,11 @@ function badgeStatut(statut) {
     'Suspendu': 'badge-suspendu', 'Retraité': 'badge-retraite'
   };
   return `<span class="badge ${map[statut] || 'badge-actif'}">${esc(statut || 'Actif')}</span>`;
+}
+
+function badgeCongeStatut(statut) {
+  const map = { 'Approuvé': 'badge-actif', 'En attente': 'badge-conge', 'Refusé': 'badge-suspendu' };
+  return `<span class="badge ${map[statut] || 'badge-conge'}">${esc(statut || 'En attente')}</span>`;
 }
 
 let timeoutAlerte = null;

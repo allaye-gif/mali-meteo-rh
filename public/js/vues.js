@@ -29,7 +29,7 @@ VUES.tableauBord = function (stats) {
       <div class="panneau"><h3>Répartition par direction / service</h3><div class="barre-repartition">${rep(stats.parDirection, 'direction')}</div></div>
       <div class="panneau"><h3>Répartition par type de contrat</h3><div class="barre-repartition">${rep(stats.parContrat, 'type_contrat')}</div></div>
       <div class="panneau"><h3>Répartition par statut</h3><div class="barre-repartition">${rep(stats.parStatut, 'statut')}</div></div>
-      <div class="panneau"><h3>Répartition par catégorie professionnelle</h3><div class="barre-repartition">${rep(stats.parCategorie, 'categorie')}</div></div>
+      <div class="panneau"><h3>Répartition par type de personnel</h3><div class="barre-repartition">${rep(stats.parCategorie, 'categorie')}</div></div>
     </div>
   `;
 };
@@ -49,6 +49,7 @@ VUES.listePersonnel = function (agents, peutGerer) {
       <td>${esc(a.type_contrat || '—')}</td>
       <td>${badgeStatut(a.statut)}</td>
       <td>${esc(a.telephone || '—')}</td>
+      <td>${esc(a.email || '—')}</td>
     </tr>
   `).join('');
 
@@ -65,7 +66,7 @@ VUES.listePersonnel = function (agents, peutGerer) {
     <div class="table-wrap">
       ${agents.length ? `
       <table>
-        <thead><tr><th>Agent</th><th>Fonction</th><th>Direction / service</th><th>Contrat</th><th>Statut</th><th>Téléphone</th></tr></thead>
+        <thead><tr><th>Agent</th><th>Fonction</th><th>Direction / service</th><th>Contrat</th><th>Statut</th><th>Téléphone</th><th>E-mail</th></tr></thead>
         <tbody id="corps-table-agents">${lignes}</tbody>
       </table>` : `
       <div class="etat-vide"><div class="icone">👤</div><p>Aucun agent ne correspond à votre recherche.</p></div>`}
@@ -74,7 +75,8 @@ VUES.listePersonnel = function (agents, peutGerer) {
 };
 
 // ---------------- Fiche agent ----------------
-VUES.ficheAgent = function (a, affectations, documents, peutGerer) {
+VUES.ficheAgent = function (a, donnees, peutGerer) {
+  const { affectations, documents, enfants, carriere, conges, diplomes } = donnees;
   const ligne = (lib, val) => `<div class="ligne-info"><span class="lib">${esc(lib)}</span><span class="val">${esc(val ?? '—') || '—'}</span></div>`;
 
   const affectationsHtml = affectations.length ? affectations.map(af => `
@@ -83,7 +85,10 @@ VUES.ficheAgent = function (a, affectations, documents, peutGerer) {
       <span class="val">${formatDate(af.date_debut)} → ${af.date_fin ? formatDate(af.date_fin) : "aujourd'hui"}</span>
     </div>`).join('') : '<p class="text-muted text-sm">Aucune affectation enregistrée.</p>';
 
-  const documentsHtml = documents.length ? documents.map(d => `
+  const actesNaissanceAgent = documents.filter(d => d.type_document === 'Acte de naissance');
+  const autresDocuments = documents.filter(d => d.type_document !== 'Acte de naissance');
+
+  const documentsHtml = autresDocuments.length ? autresDocuments.map(d => `
     <div class="ligne-info">
       <span class="lib">📄 ${esc(d.nom_document)} <span class="text-muted">(${esc(d.type_document)})</span></span>
       <span class="val">
@@ -91,6 +96,45 @@ VUES.ficheAgent = function (a, affectations, documents, peutGerer) {
         ${peutGerer ? ` · <a href="#" data-suppr-doc="${d.id}" style="color:var(--rouge)">Supprimer</a>` : ''}
       </span>
     </div>`).join('') : '<p class="text-muted text-sm">Aucun document.</p>';
+
+  const acteNaissanceAgentHtml = actesNaissanceAgent.length ? actesNaissanceAgent.map(d => `
+    <div class="ligne-info">
+      <span class="lib">📄 ${esc(d.nom_document)}</span>
+      <span class="val">
+        <a href="${esc(d.chemin_fichier)}" target="_blank" rel="noopener">Voir</a>
+        ${peutGerer ? ` · <a href="#" data-suppr-doc="${d.id}" style="color:var(--rouge)">Supprimer</a>` : ''}
+      </span>
+    </div>`).join('') : '<p class="text-muted text-sm">Aucun acte de naissance déposé.</p>';
+
+  const enfantsHtml = enfants.length ? enfants.map(e => `
+    <div class="ligne-info">
+      <span class="lib">${esc(e.nom)} ${esc(e.prenom)}${e.date_naissance ? ' — né(e) le ' + formatDate(e.date_naissance) : ''}${e.remarques ? ' · ' + esc(e.remarques) : ''}</span>
+      <span class="val">
+        ${e.acte_naissance_path ? `<a href="${esc(e.acte_naissance_path)}" target="_blank" rel="noopener">Voir l'acte</a>` : '<span class="text-muted">Aucun acte</span>'}
+        ${peutGerer ? ` · <a href="#" data-suppr-enfant="${e.id}" style="color:var(--rouge)">Supprimer</a>` : ''}
+      </span>
+    </div>`).join('') : '<p class="text-muted text-sm">Aucun enfant enregistré.</p>';
+
+  const carriereHtml = carriere.length ? carriere.map(c => `
+    <div class="ligne-info">
+      <span class="lib">${esc(c.type_evenement)}${c.grade ? ' — ' + esc(c.grade) : ''}${c.echelon ? ' (éch. ' + esc(c.echelon) + ')' : ''}${c.reference_decision ? ' · réf. ' + esc(c.reference_decision) : ''}</span>
+      <span class="val">${formatDate(c.date_effet)}${peutGerer ? ` · <a href="#" data-suppr-carriere="${c.id}" style="color:var(--rouge)">Supprimer</a>` : ''}</span>
+    </div>`).join('') : '<p class="text-muted text-sm">Aucun événement de carrière enregistré.</p>';
+
+  const congesHtml = conges.length ? conges.map(c => `
+    <div class="ligne-info">
+      <span class="lib">${esc(c.type_conge)}${c.motif ? ' — ' + esc(c.motif) : ''} ${badgeCongeStatut(c.statut)}</span>
+      <span class="val">${formatDate(c.date_debut)} → ${c.date_fin ? formatDate(c.date_fin) : '—'}${c.nombre_jours ? ` (${c.nombre_jours} j)` : ''}${peutGerer ? ` · <a href="#" data-suppr-conge="${c.id}" style="color:var(--rouge)">Supprimer</a>` : ''}</span>
+    </div>`).join('') : '<p class="text-muted text-sm">Aucun congé/permission enregistré.</p>';
+
+  const diplomesHtml = diplomes.length ? diplomes.map(d => `
+    <div class="ligne-info">
+      <span class="lib">🎓 ${esc(d.intitule)} <span class="text-muted">(${esc(d.type_diplome || 'Diplôme')})</span>${d.etablissement ? ' — ' + esc(d.etablissement) : ''}${d.annee_obtention ? ' · ' + esc(d.annee_obtention) : ''}</span>
+      <span class="val">
+        ${d.fichier_path ? `<a href="${esc(d.fichier_path)}" target="_blank" rel="noopener">Voir</a>` : '<span class="text-muted">Aucun fichier</span>'}
+        ${peutGerer ? ` · <a href="#" data-suppr-diplome="${d.id}" style="color:var(--rouge)">Supprimer</a>` : ''}
+      </span>
+    </div>`).join('') : '<p class="text-muted text-sm">Aucun diplôme/attestation enregistré.</p>';
 
   return `
     <div class="fiche-entete">
@@ -128,15 +172,84 @@ VUES.ficheAgent = function (a, affectations, documents, peutGerer) {
         ${ligne('Catégorie', a.categorie)}
         ${ligne('Type de contrat', a.type_contrat)}
         ${ligne('Date d\'embauche', a.date_embauche ? formatDate(a.date_embauche) : null)}
-        ${ligne('Diplôme', a.diplome)}
       </div>
       <div class="bloc-info"><h4>Historique des affectations</h4>${affectationsHtml}</div>
+
+      <div class="bloc-info pleine-largeur"><h4>État civil</h4>
+        <p class="text-muted text-sm mb-8">Acte de naissance de l'agent</p>
+        ${acteNaissanceAgentHtml}
+        ${peutGerer ? `
+        <form id="form-ajout-acte-agent" class="flex gap-8 mt-8" style="flex-wrap:wrap">
+          <input type="file" name="fichier" required>
+          <button class="btn btn-sm btn-primary" type="submit">Ajouter l'acte de naissance</button>
+        </form>` : ''}
+        <p class="text-muted text-sm mb-8 mt-16">Enfants</p>
+        ${enfantsHtml}
+        ${peutGerer ? `
+        <form id="form-ajout-enfant" class="flex gap-8 mt-8" style="flex-wrap:wrap">
+          <input type="text" name="nom" placeholder="Nom de l'enfant" required style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="text" name="prenom" placeholder="Prénom de l'enfant" required style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="date" name="date_naissance" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="text" name="remarques" placeholder="Autre information essentielle (optionnel)" style="flex:1;min-width:160px;padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="file" name="acte_naissance" title="Acte de naissance de l'enfant">
+          <button class="btn btn-sm btn-primary" type="submit">Ajouter l'enfant</button>
+        </form>` : ''}
+      </div>
+
+      <div class="bloc-info"><h4>Carrière/emploi</h4>${carriereHtml}
+        ${peutGerer ? `
+        <form id="form-ajout-carriere" class="flex gap-8 mt-16" style="flex-wrap:wrap">
+          <select name="type_evenement" required style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+            <option value="">Type d'événement</option>
+            ${['Recrutement','Titularisation','Avancement d\'échelon','Promotion de grade','Nomination','Autre'].map(o => `<option>${o}</option>`).join('')}
+          </select>
+          <input type="text" name="grade" placeholder="Grade" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="text" name="echelon" placeholder="Échelon" style="width:90px;padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="date" name="date_effet" required style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="text" name="reference_decision" placeholder="Réf. décision/arrêté" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="text" name="observations" placeholder="Observations" style="flex:1;min-width:140px;padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <button class="btn btn-sm btn-primary" type="submit">Ajouter</button>
+        </form>` : ''}
+      </div>
+
+      <div class="bloc-info"><h4>Congé/Permission</h4>${congesHtml}
+        ${peutGerer ? `
+        <form id="form-ajout-conge" class="flex gap-8 mt-16" style="flex-wrap:wrap">
+          <select name="type_conge" required style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+            <option value="">Type</option>
+            ${['Congé annuel','Congé maladie','Congé maternité','Permission','Autre'].map(o => `<option>${o}</option>`).join('')}
+          </select>
+          <input type="date" name="date_debut" required style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="date" name="date_fin" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="number" min="0" name="nombre_jours" placeholder="Nb jours" style="width:90px;padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="text" name="motif" placeholder="Motif" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <select name="statut" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+            <option>En attente</option><option>Approuvé</option><option>Refusé</option>
+          </select>
+          <button class="btn btn-sm btn-primary" type="submit">Ajouter</button>
+        </form>` : ''}
+      </div>
+
+      <div class="bloc-info pleine-largeur"><h4>Diplôme/Attestations</h4>${diplomesHtml}
+        ${peutGerer ? `
+        <form id="form-ajout-diplome" class="flex gap-8 mt-16" style="flex-wrap:wrap">
+          <input type="text" name="intitule" placeholder="Intitulé" required style="flex:1;min-width:140px;padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <select name="type_diplome" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+            <option>Diplôme</option><option>Attestation</option><option>Certificat</option>
+          </select>
+          <input type="text" name="etablissement" placeholder="Établissement" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="text" name="annee_obtention" placeholder="Année" style="width:80px;padding:8px;border:1.5px solid var(--border);border-radius:6px">
+          <input type="file" name="fichier">
+          <button class="btn btn-sm btn-primary" type="submit">Ajouter</button>
+        </form>` : ''}
+      </div>
+
       <div class="bloc-info pleine-largeur"><h4>Documents administratifs</h4>${documentsHtml}
         ${peutGerer ? `
         <form id="form-ajout-doc" class="flex gap-8 mt-16" style="flex-wrap:wrap">
           <input type="text" name="nom_document" placeholder="Nom du document" required style="flex:1;min-width:140px;padding:8px;border:1.5px solid var(--border);border-radius:6px">
           <select name="type_document" style="padding:8px;border:1.5px solid var(--border);border-radius:6px">
-            <option>Contrat</option><option>Diplôme</option><option>Pièce d'identité</option><option>Certificat médical</option><option>Autre</option>
+            <option>Contrat</option><option>Pièce d'identité</option><option>Certificat médical</option><option>Acte de naissance</option><option>Autre</option>
           </select>
           <input type="file" name="fichier" required>
           <button class="btn btn-sm btn-primary" type="submit">Ajouter</button>
@@ -195,7 +308,12 @@ VUES.formulaireAgent = function (a = {}) {
               <option value="">—</option>
             </select>
           </div>
-          <div class="champ"><label>Catégorie professionnelle</label><input name="categorie" value="${esc(a.categorie)}"></div>
+          <div class="champ"><label>Catégorie professionnelle / Type de personnel</label>
+            <select name="categorie">
+              <option value="">—</option>
+              ${TYPES_PERSONNEL.map(o => `<option ${sel(a.categorie,o)}>${o}</option>`).join('')}
+            </select>
+          </div>
           <div class="champ"><label>Type de contrat</label>
             <select name="type_contrat">
               <option value="">—</option>
@@ -203,7 +321,6 @@ VUES.formulaireAgent = function (a = {}) {
             </select>
           </div>
           <div class="champ"><label>Date d'embauche</label><input type="date" name="date_embauche" value="${esc(a.date_embauche)}"></div>
-          <div class="champ"><label>Diplôme</label><input name="diplome" value="${esc(a.diplome)}"></div>
           <div class="champ"><label>Statut</label>
             <select name="statut">
               ${['Actif','En congé','Suspendu','Retraité'].map(o => `<option ${sel(a.statut || 'Actif',o)}>${o}</option>`).join('')}
@@ -307,8 +424,8 @@ VUES.rapports = function (stats) {
       <div class="panneau"><h3>Effectif par statut</h3>
         <table><thead><tr><th>Statut</th><th>Effectif</th></tr></thead><tbody>${rep(stats.parStatut, 'statut')}</tbody></table>
       </div>
-      <div class="panneau"><h3>Effectif par catégorie professionnelle</h3>
-        <table><thead><tr><th>Catégorie</th><th>Effectif</th></tr></thead><tbody>${rep(stats.parCategorie, 'categorie')}</tbody></table>
+      <div class="panneau"><h3>Effectif par type de personnel</h3>
+        <table><thead><tr><th>Type de personnel</th><th>Effectif</th></tr></thead><tbody>${rep(stats.parCategorie, 'categorie')}</tbody></table>
       </div>
     </div>
   `;

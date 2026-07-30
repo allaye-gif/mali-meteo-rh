@@ -11,6 +11,10 @@ const agentsRoutes = require('./src/routes/agents.routes');
 const documentsRoutes = require('./src/routes/documents.routes');
 const reportsRoutes = require('./src/routes/reports.routes');
 const backupRoutes = require('./src/routes/backup.routes');
+const enfantsRoutes = require('./src/routes/enfants.routes');
+const carriereRoutes = require('./src/routes/carriere.routes');
+const congesRoutes = require('./src/routes/conges.routes');
+const diplomesRoutes = require('./src/routes/diplomes.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,7 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Dossiers de fichiers (photos, documents)
 const uploadsDir = path.join(__dirname, 'uploads');
-['photos', 'documents'].forEach(d => {
+['photos', 'documents', 'enfants', 'diplomes'].forEach(d => {
   const p = path.join(uploadsDir, d);
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 });
@@ -34,6 +38,10 @@ app.use('/api/agents', agentsRoutes);
 app.use('/api/documents', documentsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/enfants', enfantsRoutes);
+app.use('/api/carriere', carriereRoutes);
+app.use('/api/conges', congesRoutes);
+app.use('/api/diplomes', diplomesRoutes);
 
 // Frontend statique
 app.use(express.static(path.join(__dirname, 'public')));

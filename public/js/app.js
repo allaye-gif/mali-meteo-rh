@@ -206,18 +206,118 @@ function rendreListePersonnel(agents) {
 }
 
 // ---------------- Personnel : fiche détaillée ----------------
+async function chargerDonneesFiche(id) {
+  const [affectations, documents, enfants, carriere, conges, diplomes] = await Promise.all([
+    API.get(`/agents/${id}/affectations`),
+    API.get(`/documents/agent/${id}`),
+    API.get(`/enfants/agent/${id}`),
+    API.get(`/carriere/agent/${id}`),
+    API.get(`/conges/agent/${id}`),
+    API.get(`/diplomes/agent/${id}`),
+  ]);
+  return { affectations, documents, enfants, carriere, conges, diplomes };
+}
+
+// Cable les formulaires d'ajout et liens de suppression communs aux blocs
+// État civil / Carrière / Congé / Diplôme (rôles admin/grh uniquement).
+function cablerBlocsFicheAgent(id, rafraichir) {
+  const formActeAgent = document.getElementById('form-ajout-acte-agent');
+  if (formActeAgent) {
+    formActeAgent.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(formActeAgent);
+      fd.set('nom_document', 'Acte de naissance');
+      fd.set('type_document', 'Acte de naissance');
+      try {
+        await API.post(`/documents/agent/${id}`, fd, { isForm: true });
+        afficherAlerte('Acte de naissance ajouté.', 'succes');
+        rafraichir();
+      } catch (err) { afficherAlerte(err.message, 'erreur'); }
+    });
+  }
+
+  const formEnfant = document.getElementById('form-ajout-enfant');
+  if (formEnfant) {
+    formEnfant.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(formEnfant);
+      try {
+        await API.post(`/enfants/agent/${id}`, fd, { isForm: true });
+        afficherAlerte('Enfant ajouté.', 'succes');
+        rafraichir();
+      } catch (err) { afficherAlerte(err.message, 'erreur'); }
+    });
+  }
+
+  const formCarriere = document.getElementById('form-ajout-carriere');
+  if (formCarriere) {
+    formCarriere.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = Object.fromEntries(new FormData(formCarriere).entries());
+      try {
+        await API.post(`/carriere/agent/${id}`, payload);
+        afficherAlerte('Événement de carrière ajouté.', 'succes');
+        rafraichir();
+      } catch (err) { afficherAlerte(err.message, 'erreur'); }
+    });
+  }
+
+  const formConge = document.getElementById('form-ajout-conge');
+  if (formConge) {
+    formConge.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = Object.fromEntries(new FormData(formConge).entries());
+      try {
+        await API.post(`/conges/agent/${id}`, payload);
+        afficherAlerte('Congé/permission ajouté.', 'succes');
+        rafraichir();
+      } catch (err) { afficherAlerte(err.message, 'erreur'); }
+    });
+  }
+
+  const formDiplome = document.getElementById('form-ajout-diplome');
+  if (formDiplome) {
+    formDiplome.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(formDiplome);
+      try {
+        await API.post(`/diplomes/agent/${id}`, fd, { isForm: true });
+        afficherAlerte('Diplôme/attestation ajouté.', 'succes');
+        rafraichir();
+      } catch (err) { afficherAlerte(err.message, 'erreur'); }
+    });
+  }
+
+  const suppressions = [
+    ['[data-suppr-enfant]', 'supprEnfant', '/enfants/', 'Supprimer cet enfant', 'Voulez-vous vraiment supprimer cet enfant ?'],
+    ['[data-suppr-carriere]', 'supprCarriere', '/carriere/', 'Supprimer cet événement', 'Voulez-vous vraiment supprimer cet événement de carrière ?'],
+    ['[data-suppr-conge]', 'supprConge', '/conges/', 'Supprimer ce congé', 'Voulez-vous vraiment supprimer ce congé/permission ?'],
+    ['[data-suppr-diplome]', 'supprDiplome', '/diplomes/', 'Supprimer ce diplôme', 'Voulez-vous vraiment supprimer ce diplôme/attestation ?'],
+  ];
+  suppressions.forEach(([selecteur, cle, base, titre, message]) => {
+    document.querySelectorAll(selecteur).forEach(lien => {
+      lien.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const ok = await confirmerAction(titre, message, 'Supprimer');
+        if (!ok) return;
+        await API.del(`${base}${lien.dataset[cle]}`);
+        rafraichir();
+      });
+    });
+  });
+}
+
 async function vuePersonnelFiche(id) {
   definirTitre('Fiche agent');
   document.getElementById('vue').innerHTML = '<p class="text-muted">Chargement…</p>';
-  const [agent, affectations, documents] = await Promise.all([
+  const [agent, donnees] = await Promise.all([
     API.get(`/agents/${id}`),
-    API.get(`/agents/${id}/affectations`),
-    API.get(`/documents/agent/${id}`),
+    chargerDonneesFiche(id),
   ]);
   const peutGerer = peutGererPersonnel();
-  document.getElementById('vue').innerHTML = VUES.ficheAgent(agent, affectations, documents, peutGerer);
+  document.getElementById('vue').innerHTML = VUES.ficheAgent(agent, donnees, peutGerer);
 
-  document.getElementById('btn-imprimer-fiche').addEventListener('click', () => imprimerFicheAgent(agent, affectations));
+  document.getElementById('btn-imprimer-fiche').addEventListener('click', () => imprimerFicheAgent(agent, donnees));
 
   if (peutGerer) {
     document.getElementById('btn-modifier-agent').addEventListener('click', () => { window.location.hash = `#personnel/${id}/modifier`; });
@@ -251,6 +351,7 @@ async function vuePersonnelFiche(id) {
         vuePersonnelFiche(id);
       });
     });
+    cablerBlocsFicheAgent(id, () => vuePersonnelFiche(id));
   }
 }
 
@@ -259,12 +360,9 @@ async function vueMaFiche() {
   definirTitre('Ma fiche');
   document.getElementById('vue').innerHTML = '<p class="text-muted">Chargement…</p>';
   const agent = await API.get('/agents/me');
-  const [affectations, documents] = await Promise.all([
-    API.get(`/agents/${agent.id}/affectations`),
-    API.get(`/documents/agent/${agent.id}`),
-  ]);
-  document.getElementById('vue').innerHTML = VUES.ficheAgent(agent, affectations, documents, false);
-  document.getElementById('btn-imprimer-fiche').addEventListener('click', () => imprimerFicheAgent(agent, affectations));
+  const donnees = await chargerDonneesFiche(agent.id);
+  document.getElementById('vue').innerHTML = VUES.ficheAgent(agent, donnees, false);
+  document.getElementById('btn-imprimer-fiche').addEventListener('click', () => imprimerFicheAgent(agent, donnees));
 }
 
 // Remplit le <select> Service selon la Direction choisie, et re-selectionne
@@ -461,7 +559,8 @@ function enteteImpression(titre) {
   `;
 }
 
-function imprimerFicheAgent(a, affectations) {
+function imprimerFicheAgent(a, donnees) {
+  const { affectations, enfants, carriere, conges, diplomes } = donnees;
   const zone = document.getElementById('zone-impression');
   zone.innerHTML = `
     ${enteteImpression('Fiche agent')}
@@ -474,12 +573,32 @@ function imprimerFicheAgent(a, affectations) {
       <tr><th>Adresse</th><td colspan="3">${esc(a.adresse) || '—'}</td></tr>
       <tr><th>Fonction</th><td>${esc(a.fonction) || '—'}</td><th>Direction / service</th><td>${esc(a.direction) || '—'}${a.service ? ' / ' + esc(a.service) : ''}</td></tr>
       <tr><th>Type de contrat</th><td>${esc(a.type_contrat) || '—'}</td><th>Date d'embauche</th><td>${formatDate(a.date_embauche)}</td></tr>
-      <tr><th>Catégorie</th><td>${esc(a.categorie) || '—'}</td><th>Diplôme</th><td>${esc(a.diplome) || '—'}</td></tr>
+      <tr><th>Catégorie</th><td colspan="3">${esc(a.categorie) || '—'}</td></tr>
     </table>
     <p style="margin-top:16px;font-weight:bold;font-size:12px">Historique des affectations</p>
     <table class="imp-table">
       <thead><tr><th>Direction / service</th><th>Fonction</th><th>Début</th><th>Fin</th></tr></thead>
       <tbody>${affectations.map(af => `<tr><td>${esc(af.direction)}${af.service ? ' / ' + esc(af.service) : ''}</td><td>${esc(af.fonction) || '—'}</td><td>${formatDate(af.date_debut)}</td><td>${af.date_fin ? formatDate(af.date_fin) : "En cours"}</td></tr>`).join('') || '<tr><td colspan="4">Aucune</td></tr>'}</tbody>
+    </table>
+    <p style="margin-top:16px;font-weight:bold;font-size:12px">État civil — Enfants</p>
+    <table class="imp-table">
+      <thead><tr><th>Nom</th><th>Prénom</th><th>Date de naissance</th></tr></thead>
+      <tbody>${enfants.map(e => `<tr><td>${esc(e.nom)}</td><td>${esc(e.prenom)}</td><td>${formatDate(e.date_naissance)}</td></tr>`).join('') || '<tr><td colspan="3">Aucun</td></tr>'}</tbody>
+    </table>
+    <p style="margin-top:16px;font-weight:bold;font-size:12px">Carrière/emploi</p>
+    <table class="imp-table">
+      <thead><tr><th>Événement</th><th>Grade</th><th>Échelon</th><th>Date d'effet</th><th>Référence</th></tr></thead>
+      <tbody>${carriere.map(c => `<tr><td>${esc(c.type_evenement)}</td><td>${esc(c.grade) || '—'}</td><td>${esc(c.echelon) || '—'}</td><td>${formatDate(c.date_effet)}</td><td>${esc(c.reference_decision) || '—'}</td></tr>`).join('') || '<tr><td colspan="5">Aucun</td></tr>'}</tbody>
+    </table>
+    <p style="margin-top:16px;font-weight:bold;font-size:12px">Congé/Permission</p>
+    <table class="imp-table">
+      <thead><tr><th>Type</th><th>Début</th><th>Fin</th><th>Statut</th></tr></thead>
+      <tbody>${conges.map(c => `<tr><td>${esc(c.type_conge)}</td><td>${formatDate(c.date_debut)}</td><td>${c.date_fin ? formatDate(c.date_fin) : '—'}</td><td>${esc(c.statut)}</td></tr>`).join('') || '<tr><td colspan="4">Aucun</td></tr>'}</tbody>
+    </table>
+    <p style="margin-top:16px;font-weight:bold;font-size:12px">Diplôme/Attestations</p>
+    <table class="imp-table">
+      <thead><tr><th>Intitulé</th><th>Établissement</th><th>Année</th></tr></thead>
+      <tbody>${diplomes.map(d => `<tr><td>${esc(d.intitule)}</td><td>${esc(d.etablissement) || '—'}</td><td>${esc(d.annee_obtention) || '—'}</td></tr>`).join('') || '<tr><td colspan="3">Aucun</td></tr>'}</tbody>
     </table>
     <p class="imp-pied">Document généré par l'application de gestion du personnel de Mali-Météo.</p>
   `;

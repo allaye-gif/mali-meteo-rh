@@ -87,6 +87,52 @@ async function init() {
       details TEXT,
       date_action TEXT NOT NULL DEFAULT ${HORODATAGE}
     );
+
+    CREATE TABLE IF NOT EXISTS enfants (
+      id SERIAL PRIMARY KEY,
+      agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+      nom TEXT NOT NULL,
+      prenom TEXT NOT NULL,
+      date_naissance TEXT,
+      acte_naissance_path TEXT,
+      remarques TEXT,
+      date_creation TEXT NOT NULL DEFAULT ${HORODATAGE}
+    );
+
+    CREATE TABLE IF NOT EXISTS carriere (
+      id SERIAL PRIMARY KEY,
+      agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+      type_evenement TEXT NOT NULL,
+      grade TEXT,
+      echelon TEXT,
+      date_effet TEXT NOT NULL,
+      reference_decision TEXT,
+      observations TEXT,
+      date_creation TEXT NOT NULL DEFAULT ${HORODATAGE}
+    );
+
+    CREATE TABLE IF NOT EXISTS conges (
+      id SERIAL PRIMARY KEY,
+      agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+      type_conge TEXT NOT NULL,
+      date_debut TEXT NOT NULL,
+      date_fin TEXT,
+      nombre_jours INTEGER,
+      motif TEXT,
+      statut TEXT NOT NULL DEFAULT 'En attente' CHECK (statut IN ('Approuvé','En attente','Refusé')),
+      date_creation TEXT NOT NULL DEFAULT ${HORODATAGE}
+    );
+
+    CREATE TABLE IF NOT EXISTS diplomes (
+      id SERIAL PRIMARY KEY,
+      agent_id INTEGER NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+      intitule TEXT NOT NULL,
+      etablissement TEXT,
+      annee_obtention TEXT,
+      type_diplome TEXT,
+      fichier_path TEXT,
+      date_creation TEXT NOT NULL DEFAULT ${HORODATAGE}
+    );
   `);
 
   // ---------------------------------------------------------
