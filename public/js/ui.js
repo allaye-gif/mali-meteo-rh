@@ -9,6 +9,29 @@ const ORGANISATION = {
   'Agence Comptable': [],
 };
 
+// Nom complet de chaque service, affiché en infobulle au survol de son
+// abréviation partout où elle apparaît (formulaire, fiche agent, historique
+// des affectations, impressions).
+const SERVICES_NOMS = {
+  'SIGROM': "Service Infrastructure et Gestion du Réseau d'Observation Météorologique",
+  'SPM': 'Service Prévision Météorologique',
+  'SCCC': 'Service Climatologie et Changement Climatique',
+  'SA': 'Service Agrométéorologie',
+  'SGRH': 'Service Gestion des Ressources Humaines',
+  'SBA': 'Service Budget et Approvisionnement',
+};
+
+// Bureaux rattachés à chaque service : second niveau du menu en cascade
+// Direction > Service > Bureau du formulaire agent.
+const BUREAUX = {
+  'SIGROM': ['Bureau Infrastructure et Équipements', "Bureau Gestion du Réseau d'Observation Météorologique"],
+  'SPM': ['Bureau Prévision Météorologique', 'Bureau Veille et Alertes Météorologiques'],
+  'SCCC': ['Bureau Archives des Données Climatologiques', 'Bureau des Services Climatologiques et du Cadre National des Services Climatologiques'],
+  'SA': ['Bureau Assistance au Monde Rural', 'Bureau Développement Agrométéorologique'],
+  'SGRH': ['Bureau Emploi, Carrière et Formation', 'Bureau Solde et Affaires Sociales'],
+  'SBA': ['Bureau Budget', 'Bureau Approvisionnement'],
+};
+
 // Types de personnel (catégorie professionnelle) : liste fixe utilisée à la
 // fois par le formulaire agent et par la répartition du tableau de bord.
 const TYPES_PERSONNEL = [
@@ -24,6 +47,15 @@ function esc(v) {
   return String(v)
     .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+}
+
+// Affiche une abréviation avec le nom complet correspondant en infobulle
+// (survol de la souris) quand ce nom est connu dans `dico`, sinon
+// l'abréviation seule. Retourne du HTML déjà échappé, à insérer tel quel.
+function libelleAbrev(valeur, dico) {
+  if (!valeur) return '';
+  const complet = dico[valeur];
+  return complet ? `<span title="${esc(complet)}">${esc(valeur)}</span>` : esc(valeur);
 }
 
 function formatDate(iso) {

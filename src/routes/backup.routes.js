@@ -20,9 +20,9 @@ const TABLES = {
   users: ['id', 'username', 'password_hash', 'nom_complet', 'role', 'actif', 'date_creation'],
   agents: ['id', 'matricule', 'nom', 'prenom', 'sexe', 'date_naissance', 'lieu_naissance',
     'situation_matrimoniale', 'nombre_enfants', 'adresse', 'telephone', 'email', 'fonction',
-    'direction', 'categorie', 'type_contrat', 'date_embauche', 'diplome', 'statut', 'photo_path',
+    'direction', 'service', 'bureau', 'categorie', 'type_contrat', 'date_embauche', 'diplome', 'statut', 'photo_path',
     'date_creation', 'date_modification', 'cree_par'],
-  affectations: ['id', 'agent_id', 'direction', 'fonction', 'date_debut', 'date_fin', 'motif'],
+  affectations: ['id', 'agent_id', 'direction', 'service', 'bureau', 'fonction', 'date_debut', 'date_fin', 'motif'],
   documents: ['id', 'agent_id', 'nom_document', 'type_document', 'chemin_fichier', 'date_ajout'],
   journal_activite: ['id', 'user_id', 'action', 'details', 'date_action'],
 };

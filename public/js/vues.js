@@ -45,7 +45,7 @@ VUES.listePersonnel = function (agents, peutGerer) {
         </div>
       </td>
       <td>${esc(a.fonction || '—')}</td>
-      <td>${esc(a.direction || '—')}${a.service ? ' / ' + esc(a.service) : ''}</td>
+      <td>${esc(a.direction || '—')}${a.service ? ' / ' + libelleAbrev(a.service, SERVICES_NOMS) : ''}</td>
       <td>${esc(a.type_contrat || '—')}</td>
       <td>${badgeStatut(a.statut)}</td>
       <td>${esc(a.telephone || '—')}</td>
@@ -78,10 +78,11 @@ VUES.listePersonnel = function (agents, peutGerer) {
 VUES.ficheAgent = function (a, donnees, peutGerer) {
   const { affectations, documents, enfants, carriere, conges, diplomes } = donnees;
   const ligne = (lib, val) => `<div class="ligne-info"><span class="lib">${esc(lib)}</span><span class="val">${esc(val ?? '—') || '—'}</span></div>`;
+  const ligneHtml = (lib, html) => `<div class="ligne-info"><span class="lib">${esc(lib)}</span><span class="val">${html || '—'}</span></div>`;
 
   const affectationsHtml = affectations.length ? affectations.map(af => `
     <div class="ligne-info">
-      <span class="lib">${esc(af.direction)}${af.service ? ' / ' + esc(af.service) : ''} ${af.fonction ? '· ' + esc(af.fonction) : ''}</span>
+      <span class="lib">${esc(af.direction)}${af.service ? ' / ' + libelleAbrev(af.service, SERVICES_NOMS) : ''}${af.bureau ? ' / ' + esc(af.bureau) : ''} ${af.fonction ? '· ' + esc(af.fonction) : ''}</span>
       <span class="val">${formatDate(af.date_debut)} → ${af.date_fin ? formatDate(af.date_fin) : "aujourd'hui"}</span>
     </div>`).join('') : '<p class="text-muted text-sm">Aucune affectation enregistrée.</p>';
 
@@ -142,7 +143,7 @@ VUES.ficheAgent = function (a, donnees, peutGerer) {
       <div class="fiche-identite">
         <h3>${esc(a.nom)} ${esc(a.prenom)}</h3>
         <div class="matricule">Matricule : ${esc(a.matricule)}</div>
-        <div class="fonction">${esc(a.fonction || 'Fonction non renseignée')} — ${esc(a.direction || 'Direction non renseignée')}${a.service ? ' / ' + esc(a.service) : ''}</div>
+        <div class="fonction">${esc(a.fonction || 'Fonction non renseignée')} — ${esc(a.direction || 'Direction non renseignée')}${a.service ? ' / ' + libelleAbrev(a.service, SERVICES_NOMS) : ''}${a.bureau ? ' / ' + esc(a.bureau) : ''}</div>
         <div class="mt-16">${badgeStatut(a.statut)}</div>
       </div>
       <div class="droite">
@@ -168,7 +169,8 @@ VUES.ficheAgent = function (a, donnees, peutGerer) {
       <div class="bloc-info"><h4>Situation professionnelle</h4>
         ${ligne('Fonction', a.fonction)}
         ${ligne('Direction', a.direction)}
-        ${ligne('Service', a.service)}
+        ${ligneHtml('Service', libelleAbrev(a.service, SERVICES_NOMS))}
+        ${ligne('Bureau', a.bureau)}
         ${ligne('Catégorie', a.categorie)}
         ${ligne('Type de contrat', a.type_contrat)}
         ${ligne('Date d\'embauche', a.date_embauche ? formatDate(a.date_embauche) : null)}
@@ -305,6 +307,11 @@ VUES.formulaireAgent = function (a = {}) {
           </div>
           <div class="champ"><label>Service</label>
             <select name="service" id="select-service">
+              <option value="">—</option>
+            </select>
+          </div>
+          <div class="champ"><label>Bureau</label>
+            <select name="bureau" id="select-bureau">
               <option value="">—</option>
             </select>
           </div>

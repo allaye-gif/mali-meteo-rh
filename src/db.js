@@ -142,6 +142,8 @@ async function init() {
   // ---------------------------------------------------------
   await pool.query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS service TEXT`);
   await pool.query(`ALTER TABLE affectations ADD COLUMN IF NOT EXISTS service TEXT`);
+  await pool.query(`ALTER TABLE agents ADD COLUMN IF NOT EXISTS bureau TEXT`);
+  await pool.query(`ALTER TABLE affectations ADD COLUMN IF NOT EXISTS bureau TEXT`);
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS agent_id INTEGER`);
   await pool.query(`
     DO $$ BEGIN

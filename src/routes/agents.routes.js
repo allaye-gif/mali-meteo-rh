@@ -95,24 +95,24 @@ router.post('/', roleRequired('admin', 'grh'), upload.single('photo'), asyncHand
     INSERT INTO agents (
       matricule, nom, prenom, sexe, date_naissance, lieu_naissance,
       situation_matrimoniale, nombre_enfants, adresse, telephone, email,
-      fonction, direction, service, categorie, type_contrat, date_embauche, diplome,
+      fonction, direction, service, bureau, categorie, type_contrat, date_embauche, diplome,
       statut, photo_path, cree_par
-    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+    ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
     RETURNING id
   `, [
     matricule, b.nom.trim(), b.prenom.trim(), b.sexe || null, b.date_naissance || null,
     b.lieu_naissance || null, b.situation_matrimoniale || null, Number(b.nombre_enfants || 0),
     b.adresse || null, b.telephone || null, b.email || null, b.fonction || null,
-    b.direction || null, b.service || null, b.categorie || null, b.type_contrat || null,
+    b.direction || null, b.service || null, b.bureau || null, b.categorie || null, b.type_contrat || null,
     b.date_embauche || null, b.diplome || null, b.statut || 'Actif', photo_path, req.user.id
   ]);
   const nouvelId = rows[0].id;
 
   if (b.direction) {
     await pool.query(`
-      INSERT INTO affectations (agent_id, direction, service, fonction, date_debut, motif)
-      VALUES ($1,$2,$3,$4,$5,$6)
-    `, [nouvelId, b.direction, b.service || null, b.fonction || null,
+      INSERT INTO affectations (agent_id, direction, service, bureau, fonction, date_debut, motif)
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+    `, [nouvelId, b.direction, b.service || null, b.bureau || null, b.fonction || null,
         b.date_embauche || new Date().toISOString().slice(0, 10), 'Affectation initiale']);
   }
 
@@ -141,22 +141,23 @@ router.put('/:id', roleRequired('admin', 'grh'), upload.single('photo'), asyncHa
 
   const nouvelleDirection = b.direction ?? agent.direction;
   const nouveauService = b.service ?? agent.service;
-  const changementAffectation = (nouvelleDirection !== agent.direction) || (nouveauService !== agent.service);
+  const nouveauBureau = b.bureau ?? agent.bureau;
+  const changementAffectation = (nouvelleDirection !== agent.direction) || (nouveauService !== agent.service) || (nouveauBureau !== agent.bureau);
 
   await pool.query(`
     UPDATE agents SET
       nom=$1, prenom=$2, sexe=$3, date_naissance=$4, lieu_naissance=$5,
       situation_matrimoniale=$6, nombre_enfants=$7, adresse=$8, telephone=$9, email=$10,
-      fonction=$11, direction=$12, service=$13, categorie=$14, type_contrat=$15, date_embauche=$16, diplome=$17,
-      statut=$18, photo_path=$19, date_modification=to_char(now(),'YYYY-MM-DD HH24:MI:SS')
-    WHERE id=$20
+      fonction=$11, direction=$12, service=$13, bureau=$14, categorie=$15, type_contrat=$16, date_embauche=$17, diplome=$18,
+      statut=$19, photo_path=$20, date_modification=to_char(now(),'YYYY-MM-DD HH24:MI:SS')
+    WHERE id=$21
   `, [
     b.nom ?? agent.nom, b.prenom ?? agent.prenom, b.sexe ?? agent.sexe,
     b.date_naissance ?? agent.date_naissance, b.lieu_naissance ?? agent.lieu_naissance,
     b.situation_matrimoniale ?? agent.situation_matrimoniale,
     Number(b.nombre_enfants ?? agent.nombre_enfants ?? 0),
     b.adresse ?? agent.adresse, b.telephone ?? agent.telephone, b.email ?? agent.email,
-    b.fonction ?? agent.fonction, nouvelleDirection, nouveauService, b.categorie ?? agent.categorie,
+    b.fonction ?? agent.fonction, nouvelleDirection, nouveauService, nouveauBureau, b.categorie ?? agent.categorie,
     b.type_contrat ?? agent.type_contrat, b.date_embauche ?? agent.date_embauche,
     b.diplome ?? agent.diplome, b.statut ?? agent.statut, photo_path, id
   ]);
@@ -165,9 +166,9 @@ router.put('/:id', roleRequired('admin', 'grh'), upload.single('photo'), asyncHa
     const aujourdhui = new Date().toISOString().slice(0, 10);
     await pool.query(`UPDATE affectations SET date_fin = $1 WHERE agent_id = $2 AND date_fin IS NULL`, [aujourdhui, id]);
     await pool.query(`
-      INSERT INTO affectations (agent_id, direction, service, fonction, date_debut, motif)
-      VALUES ($1,$2,$3,$4,$5,$6)
-    `, [id, nouvelleDirection, nouveauService, b.fonction || agent.fonction, aujourdhui, "Changement d'affectation"]);
+      INSERT INTO affectations (agent_id, direction, service, bureau, fonction, date_debut, motif)
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
+    `, [id, nouvelleDirection, nouveauService, nouveauBureau, b.fonction || agent.fonction, aujourdhui, "Changement d'affectation"]);
   }
 
   await pool.query('INSERT INTO journal_activite (user_id, action, details) VALUES ($1,$2,$3)',

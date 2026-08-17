@@ -365,22 +365,38 @@ async function vueMaFiche() {
   document.getElementById('btn-imprimer-fiche').addEventListener('click', () => imprimerFicheAgent(agent, donnees));
 }
 
-// Remplit le <select> Service selon la Direction choisie, et re-selectionne
-// le service courant quand on rouvre le formulaire d'un agent existant.
-function cablerSelectDirectionService(directionActuelle, serviceActuel) {
+// Remplit les <select> Service puis Bureau en cascade selon la Direction (et
+// le Service) choisis, et re-sélectionne les valeurs courantes quand on
+// rouvre le formulaire d'un agent existant. Les options du Service portent
+// un attribut title (infobulle) avec le nom complet du service.
+function cablerSelectDirectionService(directionActuelle, serviceActuel, bureauActuel) {
   const selDirection = document.getElementById('select-direction');
   const selService = document.getElementById('select-service');
-  if (!selDirection || !selService) return;
+  const selBureau = document.getElementById('select-bureau');
+  if (!selDirection || !selService || !selBureau) return;
 
-  const remplir = (direction, serviceASelectionner) => {
+  const remplirServices = (direction, serviceASelectionner) => {
     const services = ORGANISATION[direction] || [];
     selService.innerHTML = '<option value="">—</option>' +
-      services.map(s => `<option ${s === serviceASelectionner ? 'selected' : ''}>${s}</option>`).join('');
+      services.map(s => `<option ${s === serviceASelectionner ? 'selected' : ''} title="${esc(SERVICES_NOMS[s] || '')}">${esc(s)}</option>`).join('');
     selService.disabled = services.length === 0;
   };
 
-  remplir(directionActuelle || '', serviceActuel || '');
-  selDirection.addEventListener('change', () => remplir(selDirection.value, ''));
+  const remplirBureaux = (service, bureauASelectionner) => {
+    const bureaux = BUREAUX[service] || [];
+    selBureau.innerHTML = '<option value="">—</option>' +
+      bureaux.map(b => `<option ${b === bureauASelectionner ? 'selected' : ''}>${esc(b)}</option>`).join('');
+    selBureau.disabled = bureaux.length === 0;
+  };
+
+  remplirServices(directionActuelle || '', serviceActuel || '');
+  remplirBureaux(serviceActuel || '', bureauActuel || '');
+
+  selDirection.addEventListener('change', () => {
+    remplirServices(selDirection.value, '');
+    remplirBureaux('', '');
+  });
+  selService.addEventListener('change', () => remplirBureaux(selService.value, ''));
 }
 
 // ---------------- Personnel : formulaire création / modification ----------------
@@ -395,7 +411,7 @@ async function vuePersonnelFormulaire(id) {
   document.getElementById('btn-annuler-form').addEventListener('click', () => {
     window.location.hash = id ? `#personnel/${id}` : '#personnel';
   });
-  cablerSelectDirectionService(agent.direction, agent.service);
+  cablerSelectDirectionService(agent.direction, agent.service, agent.bureau);
   document.getElementById('form-agent').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -571,14 +587,14 @@ function imprimerFicheAgent(a, donnees) {
       <tr><th>Lieu de naissance</th><td>${esc(a.lieu_naissance) || '—'}</td><th>Situation matrimoniale</th><td>${esc(a.situation_matrimoniale) || '—'}</td></tr>
       <tr><th>Téléphone</th><td>${esc(a.telephone) || '—'}</td><th>E-mail</th><td>${esc(a.email) || '—'}</td></tr>
       <tr><th>Adresse</th><td colspan="3">${esc(a.adresse) || '—'}</td></tr>
-      <tr><th>Fonction</th><td>${esc(a.fonction) || '—'}</td><th>Direction / service</th><td>${esc(a.direction) || '—'}${a.service ? ' / ' + esc(a.service) : ''}</td></tr>
+      <tr><th>Fonction</th><td>${esc(a.fonction) || '—'}</td><th>Direction / service</th><td>${esc(a.direction) || '—'}${a.service ? ' / ' + esc(SERVICES_NOMS[a.service] || a.service) : ''}${a.bureau ? ' / ' + esc(a.bureau) : ''}</td></tr>
       <tr><th>Type de contrat</th><td>${esc(a.type_contrat) || '—'}</td><th>Date d'embauche</th><td>${formatDate(a.date_embauche)}</td></tr>
       <tr><th>Catégorie</th><td colspan="3">${esc(a.categorie) || '—'}</td></tr>
     </table>
     <p style="margin-top:16px;font-weight:bold;font-size:12px">Historique des affectations</p>
     <table class="imp-table">
       <thead><tr><th>Direction / service</th><th>Fonction</th><th>Début</th><th>Fin</th></tr></thead>
-      <tbody>${affectations.map(af => `<tr><td>${esc(af.direction)}${af.service ? ' / ' + esc(af.service) : ''}</td><td>${esc(af.fonction) || '—'}</td><td>${formatDate(af.date_debut)}</td><td>${af.date_fin ? formatDate(af.date_fin) : "En cours"}</td></tr>`).join('') || '<tr><td colspan="4">Aucune</td></tr>'}</tbody>
+      <tbody>${affectations.map(af => `<tr><td>${esc(af.direction)}${af.service ? ' / ' + esc(SERVICES_NOMS[af.service] || af.service) : ''}${af.bureau ? ' / ' + esc(af.bureau) : ''}</td><td>${esc(af.fonction) || '—'}</td><td>${formatDate(af.date_debut)}</td><td>${af.date_fin ? formatDate(af.date_fin) : "En cours"}</td></tr>`).join('') || '<tr><td colspan="4">Aucune</td></tr>'}</tbody>
     </table>
     <p style="margin-top:16px;font-weight:bold;font-size:12px">État civil — Enfants</p>
     <table class="imp-table">
